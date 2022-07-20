@@ -1,58 +1,93 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-const date = require(__dirname + '/date.js')
+const express = require("express");
+const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+const date = require(__dirname + "/date.js");
 
-const app = express()
+const app = express();
 
-let items = []
-let workItems = []
+let items = [];
+let workItems = [];
 
-app.set('view engine', 'ejs')
+app.set("view engine", "ejs");
 
-app.use(bodyParser.urlencoded({
-    extended: true
-}))
-app.use(express.static('public'))
+app.use(
+  bodyParser.urlencoded({
+    extended: true,
+  })
+);
+app.use(express.static("public"));
 
-app.get('/', (req, res) => {
+mongoose.connect("mongodb://localhost:27017/todolistDB");
 
-    let day = date.getDate()
+const itemsSchema = {
+  name: String,
+};
 
-    res.render('list', {
-        listTitle: day,
-        newListItems: items
-    })
-})
+const Item = mongoose.model("Item", itemsSchema);
 
-app.post('/', (req, res) => {
-    let item = req.body.newItem
+const item1 = new Item({
+  name: "I'm up",
+});
 
-    if (req.body.list === 'Work List') {
-        workItems.push(item)
-        res.redirect('/work')
+const item2 = new Item({
+  name: "I'm middle",
+});
+
+const item3 = new Item({
+  name: "I'm down",
+});
+
+const defaultItems = [item1, item2, item3];
+
+app.get("/", (req, res) => {
+  Item.find({}, (err, foundItems) => {
+    if (foundItems.length === 0) {
+      Item.insertMany(defaultItems, (err) => {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log("items added");
+        }
+      });
+      res.redirect("/");
     } else {
-        items.push(item)
-        res.redirect('/')
+      res.render("list", {
+        listTitle: "Today",
+        newListItems: foundItems,
+      });
     }
-})
+  });
+});
 
-app.get('/work', (req, res) => {
-    res.render('list', {
-        listTitle: 'Work List',
-        newListItems: workItems
-    })
-})
+app.post("/", (req, res) => {
+  let item = req.body.newItem;
 
-app.post('/work', (req, res) => {
-    let item = req.body.newItem
-    workItems.push(item)
-    res.redirect('/work')
-})
+  if (req.body.list === "Work List") {
+    workItems.push(item);
+    res.redirect("/work");
+  } else {
+    items.push(item);
+    res.redirect("/");
+  }
+});
 
-app.get('/about', (req, res) => {
-    res.render('about')
-})
+app.get("/work", (req, res) => {
+  res.render("list", {
+    listTitle: "Work List",
+    newListItems: workItems,
+  });
+});
+
+app.post("/work", (req, res) => {
+  let item = req.body.newItem;
+  workItems.push(item);
+  res.redirect("/work");
+});
+
+app.get("/about", (req, res) => {
+  res.render("about");
+});
 
 app.listen(3000, () => {
-    console.log('Server running')
-})
+  console.log("Server running");
+});
